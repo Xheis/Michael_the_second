@@ -33,57 +33,27 @@
 
 
 
-/* */
-
-typedef struct {
-	unsigned char on : 1;   /* 1 bit for setting and clearing */
-	unsigned char fad_value;
-} bitbang;
-
-
-
 /*    Global Variables        */
 unsigned short milliseconds = 0;
 volatile unsigned short theta[NUM_NOTES] = {0};		
-volatile unsigned short d_theta[NUM_NOTES] = {0};		//Our d_theta variable does...
-unsigned char 	data 		num_active_keys = 0; /* The number of keys which are currently being pressed */
-volatile unsigned char   data    volume = 	DEFAULT_VOLUME; 	/* Volume 0-15. 0=> mute, 15=> max */
-unsigned char   data    octave = 	DEFAULT_OCTAVE; 	/* Set inital octave */
-bitbang			fader[NUM_NOTES] = {0,0};		/* this is for reseting the fader 0=>fader has been reset. 1=> fader is currently running */
+volatile unsigned short d_theta[NUM_NOTES] = {0};			//Our d_theta variable does...
+unsigned char 	data	num_active_keys = 0; 				// The number of keys which are currently being pressed 
+volatile unsigned char 	data volume = DEFAULT_VOLUME; 		// Volume 0-15. 0=> mute, 15=> max 
+unsigned char   data	octave = DEFAULT_OCTAVE; 			// Set inital octave 
 
 
 
 
-/*	Specific Tones and their frequencies		C		 D		E		 F	  G		 A		B	 	 C#	  D#   E   F#   G#   A#    B			*/
-unsigned short	 code	tone[]	=	{262,	294, 330,	349, 392,	440, 494, 277, 311, 330, 370, 415, 466, 494};
+/*	Specific Tones and their frequencies		C	D	E	 F	  G		A	B	C#	  D#   E   F#   G#   A#    B	*/
+unsigned short	 code	tone[]	=			{262 ,294 ,330 ,349 ,392 ,440 ,494 ,277 ,311 ,330 ,370 ,415 ,466 ,494};
 
 
 
 /* 	Arrays		*/
 const char    code    sin[] = { 
                                     /* DAC voltages for 8-bit, 16 volume sine wave */
-                                    /* ------------------------------------------------------------------------ */
-                                    
-                                    #include "HarmonySine8.csv"    /* 256 piece sine wave */
+                                    #include "HarmonySine8.csv"	// 256 piece sine wave
                                 };
-
-const unsigned char    code    fader_values[] = { 
-                                    
-                                    #include "E:\University of Newcastle\2015 - Semster 1\ELEC2700\Assignments\Assignment 2\temp\fader.csv"    /* 256 piece decay */
-                                };
-
-
-const unsigned char	code delay_HB[] = {
-																		#include "delay_HB.csv"
-};
-
-const unsigned char	code delay_LB[] = {
-																		#include "delay_LB.csv"
-};
-								
-
-
-
 
 
 //--------------------------------------------------------------------------------------------------------------------
@@ -96,13 +66,10 @@ const unsigned char	code delay_LB[] = {
         Function:         Voltage_Reference_Init
 
         Description:      Initialise voltage references (Needed for DAC)
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void Voltage_Reference_Init()
 {
-    SFRPAGE   = ADC0_PAGE;
+    SFRPAGE   = ADC0_PAGE;	//Setup SFR References
     REF0CN    = 0x02;
 }
 
@@ -124,12 +91,10 @@ void Voltage_Reference_Init()
         Function:         Oscillator_Init
 
         Description:      Initialise the system Clock at a faster rate  (Needed for DAC)
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void Oscillator_Init()
 {
+	/* All values from the Config Wizard */
     int i = 0;
     SFRPAGE   = CONFIG_PAGE;
     OSCICN    = 0x83;
@@ -146,7 +111,6 @@ void Oscillator_Init()
     PLL0CN    |= 0x02;
     while ((PLL0CN & 0x10) == 0);
     CLKSEL    = 0x02;
-   
 }
 
 
@@ -165,26 +129,15 @@ void Oscillator_Init()
         Function:         Timer_Init
 
         Description:      Initialise timer ports and registers
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void Timer_Init()
 {
-	/* Timer 1 and Timer 0 */
+	/* Timer 1 and Timer 0 are setup */
 	SFRPAGE   = TIMER01_PAGE;
     TCON      = 0x40;
     TMOD      = 0x11;
     CKCON     = 0x02;
 
-   // SFRPAGE   = TIMER01_PAGE;	/* Initialize Timer0 and Timer1 */
-    //TCON      = 0x50;
-    //TMOD      = 0x11;
-    //CKCON     = 0x0A;
-	
-	TL1       = delay_LB[0];
-    TH1       = delay_HB[0];
-	
 	reset_Timer_0();
 
 	/* Timer 2 */
@@ -210,13 +163,9 @@ void Timer_Init()
         Function:         DAC_Init
 
         Description:      Initialise DAC0. 
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void DAC_Init()
 {
-	//We want this function to set up our DAC for general use. We will use the SetDAC() method for specifically readying the DAC for playing notes
 	SFRPAGE   = DAC0_PAGE;
     DAC0CN    = 0x84; 
 }
@@ -227,17 +176,13 @@ void DAC_Init()
         Function:         Interrupts_Init
 
         Description:      Initialise interrupts
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void Interrupts_Init()
 {
-		IE = 0x0; 	/* Clear the register */
-		EA = 1; 		/* Enable global interupts */
-		ET2 = 1;		/* Enable timer2 interrupt */
-		ET0 = 1;		/* Enable timer0 interrupt */
-
+		IE = 0x0; 		//Clear the register 
+		EA = 1; 		// Enable global interupts
+		ET2 = 1;		// Enable timer2 interrupt 
+		ET0 = 1;		// Enable timer0 interrupt 
 }
 
 
@@ -259,16 +204,12 @@ void Interrupts_Init()
 /*--------------------------------------------------------------------------------------------------------------------
         Function:         Timer2_ISR
 
-        Description:      
-
-        Revisions:
-
+        Description:      Timer Interrupt Service which will call our DAC_Multi_Sine_Wave(); function, and reset the Interrupt
 --------------------------------------------------------------------------------------------------------------------*/
 void Timer2_ISR (void) interrupt 5
 {
     DAC_Multi_Sine_Wave();
     TF2 = 0;        // Reset Interrupt
-
 }
 
 
@@ -316,13 +257,11 @@ void Timer2_ISR (void) interrupt 5
         Function:         Set_Volume
 
         Description:      Sets the volume of the wave
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 	void Set_Volume(unsigned char i){
-    if(i>MAX_VOLUME){    /* Adjust volume if it's value is too large */
-        i = MAX_VOLUME;
+	/* Adjust volume if it's value is too large */
+    if(i>MAX_VOLUME){    //if we're asking for a louder volume, set it to our max.
+        i = MAX_VOLUME; 
     }
     volume = i;
 }
@@ -337,19 +276,14 @@ void Timer2_ISR (void) interrupt 5
         Function:         delay
 
         Description:      Creates a delay for any application e.g. debouncing
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void delay(unsigned short delay_len){
 
-	unsigned short oldtime = millis(); /* Store the current time */
-
-	while((millis()-oldtime)<delay_len); /* wait for time to pass */
+	unsigned short oldtime = millis(); 	//Store the current time
+	while((millis()-oldtime)<delay_len); //wait for time to pass
 }	
 
 		
-
 
 
 
@@ -359,16 +293,14 @@ void delay(unsigned short delay_len){
 
         Description:      Used to mirror the byte used for the LEDs on the Perif. Board.
 													i.e. LED8 becomes the MSB, whereas it is usually the LSB
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 unsigned char mirror_binary(unsigned char num){
 	char i;
 	unsigned char temp = 0;
-	for(i=0; i<8; i++){
-		temp += (((num>>i)&0x01)<<(7-i));
+	for(i=0; i<8; i++){						//For each bit in the byte
+		temp += (((num>>i)&0x01)<<(7-i));	//Add the 'next' MSB after a RollRight command to the temp byte. This will mirror the byte.
 	}
-	return(temp);
+	return(temp); //Return Byte
 }
 
 
@@ -390,8 +322,6 @@ unsigned char mirror_binary(unsigned char num){
 
         Description:      This is our main input handling function that is looped in the gameloop.
 													It handles all PORT1 inputs (i.e. Notes)
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void PORT1_TO_PLAY_TONE(void){
 	unsigned char alteredPort;
@@ -466,12 +396,10 @@ void PORT1_TO_PLAY_TONE(void){
 
         Description:      octave_Adjust allows us to choose both an Octave and key, and will return Dtheta(i) for the
 													correct value. This is used every key.
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 unsigned short octave_Adjust(unsigned char OCT, unsigned char piano_key_select)
 {		
-		char move = OCT - DEFAULT_OCTAVE;
+		char move = OCT - DEFAULT_OCTAVE;		//Our Octave to set is OCT-Default. e.g. to shift to Octave 5, we'd Roll Right (5-4) times. e.g. Shift right once.
 		unsigned short altered_FREQ = tone[piano_key_select];
 		
 		if(move>0){
@@ -502,9 +430,6 @@ unsigned short octave_Adjust(unsigned char OCT, unsigned char piano_key_select)
 
         Description:      Performs all wave calculations and manipulations, and will output a multi-key, multi-tone 
 													sine wave.
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 char	combined_Sine(void){
 
@@ -512,16 +437,14 @@ char	combined_Sine(void){
 
 	short sine_combined = 0; /* The combined value of the notes */
 
-	if(num_active_keys!=0){
+	if(num_active_keys!=0){	//If we have any active keys, calculate the wave to produce
 
 		for(i = 0; i< NUM_NOTES; i++){
 
 			j = (unsigned char)(((theta[i])>>8)&0xFF); /* Alter theta value for point to a value between 0x0 and 0xff */
 			index_fader = fader[i].fad_value;
-			sine_combined += (sin[j]);//*fader_values[index_fader])/MAX_FADER;	
-							/* Add fader control here */
+			sine_combined += (sin[j]);					/* Add the value of sin from our LUT. This way we can manipulate the LUT for other instruments */
 			theta[i] = theta[i] + d_theta[i]; /* Increment theta */
-
 
 		}
 		return((char)(sine_combined/num_active_keys)); /* Return the new DAC Value */
@@ -543,14 +466,10 @@ char	combined_Sine(void){
         Function:         set_Tone
 
         Description:      Set tone allows us to choose both an Octave and Note from our lookup table
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void set_Tone(unsigned short frequency, unsigned char note_select)
 {
     d_theta[note_select] = frequency; /* Why do we have to multiply by 8??? Should no the timer be consistent */
-
 }
 
 
@@ -564,9 +483,6 @@ void set_Tone(unsigned short frequency, unsigned char note_select)
         Function:         UpdateLEDs 
 
         Description:      Used to show in-play button presses
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void UpdateLEDS()
 {
@@ -584,9 +500,6 @@ void UpdateLEDS()
         Function:         DAC_Multi_Sine_Wave
 
         Description:      This is our interupt method that determines the wave(s) that are generated through the DAC
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void DAC_Multi_Sine_Wave(void){
     DAC0H = SINE_OFFSET + volume*combined_Sine()/MAX_VOLUME;        /*    Update the voltage in the DAC    */
@@ -604,9 +517,6 @@ void DAC_Multi_Sine_Wave(void){
         Function:         Display_Volume
 
         Description:      This is our interupt method that determines the wave(s) that are generated through the DAC
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void Display_Volume()
 {
@@ -619,17 +529,6 @@ void Display_Volume()
 	P2 = tempVolume;
 	LD1 =i;
 }
-
-//unsigned char mirror_binary(unsigned char num){
-//	char i;
-//	unsigned char temp = 0;
-
-//	for(i=0; i<8; i++){
-//		temp += (((num>>i)&0x01)<<(7-i));
-//	}
-
-//	return(temp);
-//}
 
 
 
@@ -644,34 +543,31 @@ void Display_Volume()
         Function:         Change_Volume
 
         Description:      Sets the Volume whilst in game menu
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void Change_Volume()
 {
-	if (~PB2)
+	if (~PB2)	//if Push Button 2 is pressed
 	{
 		delay(25);
-		while (~PB2){
+		while (~PB2){	//While Push Button 2 is pressed, blink
 			blink();
 		}
-		if (volume < 15)
+		if (volume < MAX_VOLUME-1)
 		{
-			volume++;
+			volume++;	//increase volume until max
 		}
 	}
-	else if (~PB1)
+	else if (~PB1)	//if Push Button 1 is pressed
 	{
 		delay(25);
-		while (~PB1){
+		while (~PB1){	//While Push Button 1 is pressed, blink
 			blink();
 		}
 
 		
 		if (volume > 0)
 		{
-			volume--;
+			volume--;	//increase volume until min
 		}
 	}
 }
@@ -688,16 +584,13 @@ unsigned char getVolume(void){
         Function:         Change_Octave
 
         Description:      Sets the Volume whilst in game menu
-
-        Revisions:
-
 --------------------------------------------------------------------------------------------------------------------*/
 void Change_Octave()
 {
-	if (~PB4)
+	if (~PB4)	//if Push button 4 is pressed
 	{
 		delay(25);
-		while (~PB4){
+		while (~PB4){	//while Push button 4 is pressed, blink
 			blink();
 		}
 		if (octave < 8)
@@ -705,10 +598,10 @@ void Change_Octave()
 			octave++;
 		}
 	}
-	else if (~PB3)
+	else if (~PB3)	//if Push button 3 is pressed
 	{
 		delay(25);
-		while (~PB3){
+		while (~PB3){	//while Push button 3 is pressed, blink
 			blink();
 		}
 
@@ -724,6 +617,12 @@ void Change_Octave()
 
 
 
+
+/*--------------------------------------------------------------------------------------------------------------------
+        Function:         update_millis()
+
+        Description:      Interrupt for a millisecond timer
+--------------------------------------------------------------------------------------------------------------------*/
 /* Interrupt for a millisecond timer */
 void update_millis(void) interrupt 1
 {
@@ -732,11 +631,12 @@ void update_millis(void) interrupt 1
 }
 
 void reset_Timer_0(void){
-	TF0 			= 0;  /* Clear flag */
-	TL0       		= 0x06;	/* Top up for a 1 millisecond delay */
+	TF0 			= 0;  		/* Clear flag */
+	TL0       		= 0x06;		/* Top up for a 1 millisecond delay */
   	TH0       		= 0xF8;
 	TR0 			= 1; 		/* Enable Timer */
 }
+
 
 unsigned short millis(){
 	return(milliseconds);
